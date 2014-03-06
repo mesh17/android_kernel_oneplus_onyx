@@ -1738,6 +1738,45 @@ static int synaptics_rmi4_baseline_read(char *buf, char **start, off_t off,
 //lifeng@BSP.TP,2015/02/25,add the fixed node to the directory /proc/touchpanel/ end
 #endif
 
+static int keypad_enable_proc_read(char *page, char **start, off_t off,
+		int count, int *eof, void *data)
+{
+	struct synaptics_rmi4_data *ts = data;
+	return sprintf(page, "%d\n", atomic_read(&ts->keypad_enable));
+}
+
+static int keypad_enable_proc_write(struct file *file, const char __user *buffer,
+		unsigned long count, void *data)
+{
+	struct synaptics_rmi4_data *ts = data;
+	char buf[10];
+	unsigned int val = 0;
+
+	if (count > 10)
+		return count;
+
+	if (copy_from_user(buf, buffer, count)) {
+		printk(KERN_ERR "%s: read proc input error.\n", __func__);
+		return count;
+	}
+
+	sscanf(buf, "%d", &val);
+	val = (val == 0 ? 0 : 1);
+	atomic_set(&ts->keypad_enable, val);
+	if (val) {
+		set_bit(KEY_BACK, ts->input_dev->keybit);
+		set_bit(KEY_MENU, ts->input_dev->keybit);
+		set_bit(KEY_HOMEPAGE, ts->input_dev->keybit);
+	} else {
+		clear_bit(KEY_BACK, ts->input_dev->keybit);
+		clear_bit(KEY_MENU, ts->input_dev->keybit);
+		clear_bit(KEY_HOMEPAGE, ts->input_dev->keybit);
+	}
+	input_sync(ts->input_dev);
+
+	return count;
+}
+
 static int synaptics_rmi4_init_touchpanel_proc(void)
 {
 	struct proc_dir_entry *proc_entry=0;
@@ -1795,6 +1834,13 @@ static int synaptics_rmi4_init_touchpanel_proc(void)
 	}
 	//lifeng@BSP.TP,2015/02/25,add the fixed node to the directory /proc/touchpanel/ end
 	#endif
+
+	proc_entry = create_proc_entry("keypad_enable", 0666, procdir);
+	if (proc_entry) {
+		proc_entry->write_proc = keypad_enable_proc_write;
+		proc_entry->read_proc = keypad_enable_proc_read;
+		proc_entry->data = syna_rmi4_data;
+	}
 
 	return 0;
 }
@@ -2841,8 +2887,10 @@ static int synaptics_rmi4_f12_abs_report(struct synaptics_rmi4_data *rmi4_data,
 				y = rmi4_data->sensor_max_y - y;
 
 			{
-				int pressed_vkey = get_virtual_key_button(x, y);
-				if (pressed_vkey == TP_VKEY_NONE)
+				if (!atomic_read(&rmi4_data->keypad_enable)) {
+					continue;
+				}
+				if (get_virtual_key_button(x, y) == TP_VKEY_NONE)
 				{
 					//continue;//lifeng@oneplus bsp add feature virtkey report swith
 				}
@@ -4237,6 +4285,9 @@ static int synaptics_rmi4_set_input_dev(struct synaptics_rmi4_data *rmi4_data)
 	set_bit(EV_ABS, rmi4_data->input_dev->evbit);
 	set_bit(BTN_TOUCH, rmi4_data->input_dev->keybit);
 	set_bit(BTN_TOOL_FINGER, rmi4_data->input_dev->keybit);
+
+	atomic_set(&rmi4_data->keypad_enable, 1);
+
 #ifdef INPUT_PROP_DIRECT
 	set_bit(INPUT_PROP_DIRECT, rmi4_data->input_dev->propbit);
 #endif

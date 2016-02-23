@@ -23,6 +23,7 @@
 #include <linux/err.h>
 
 #include "mdss_dsi.h"
+
 #ifdef VENDOR_EDIT
 #include <linux/platform_data/lm3630_bl.h>
 #include <mach/device_info.h>
@@ -48,6 +49,7 @@
 extern  int lm3630_bank_a_update_status(u32 bl_level);
 extern int push_component_info(enum COMPONENT_TYPE type, char *version, char * manufacture);
 #endif
+
 #define DT_CMD_HDR 6
 
 #define MIN_REFRESH_RATE 30

@@ -54,6 +54,7 @@
 
 #include "mdss_fb.h"
 #include "mdss_mdp_splash_logo.h"
+
 #ifdef VENDOR_EDIT
 #include "mdss_dsi.h"
 #include <linux/pcb_version.h>

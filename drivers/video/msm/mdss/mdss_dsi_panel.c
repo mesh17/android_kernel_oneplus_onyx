@@ -1053,6 +1053,7 @@ static int mdss_dsi_panel_on(struct mdss_panel_data *pdata)
 	}
 #endif
 #endif /*VENDOR_EDIT*/
+
 	pr_debug("%s:-\n", __func__);
 	return 0;
 }
